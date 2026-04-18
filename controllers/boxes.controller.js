@@ -134,15 +134,15 @@ const exportBoxesToExcel = async (req, res) => {
     const worksheet = workbook.addWorksheet("Boxes Report");
 
     worksheet.columns = [
-      { header: "Дата", key: "date", width: 15 },
-      { header: "Товар", key: "product_name", width: 25 },
-      { header: "Отримувач", key: "receiver_name", width: 25 },
-      { header: "Вага (кг)", key: "weight", width: 12 },
-      { header: "К-сть місць", key: "boxes_count", width: 12 },
-      { header: "Коментар", key: "comment", width: 30 },
+      { header: "Date", key: "date", width: 15 },
+      { header: "Product", key: "product_name", width: 25 },
+      { header: "Receiver", key: "receiver_name", width: 25 },
+      { header: "Weight (kg)", key: "weight", width: 15 },
+      { header: "Boxes Count", key: "boxes_count", width: 15 },
+      { header: "Comment", key: "comment", width: 35 },
     ];
 
-    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).font = { bold: true, size: 12 };
 
     data.forEach((item) => {
       worksheet.addRow({
@@ -152,14 +152,13 @@ const exportBoxesToExcel = async (req, res) => {
       });
     });
 
+    const fileName = `boxes_report_${new Date().toISOString().split("T")[0]}.xlsx`;
+
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=" + `report_${Date.now()}.xlsx`,
-    );
+    res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
 
     await workbook.xlsx.write(res);
     res.end();
