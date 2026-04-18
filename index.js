@@ -27,7 +27,13 @@ const io = new Server(server, {
 
 boxesController.setIO(io);
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
