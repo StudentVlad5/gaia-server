@@ -89,7 +89,7 @@ const summary = async (req, res) => {
         SUM(weight) as total_weight,
         AVG(weight) as avg_weight
       FROM boxes
-      WHERE date BETWEEN $1 AND $2
+      WHERE date::DATE BETWEEN $1::DATE AND $2::DATE
     `,
       [from, to],
     );
