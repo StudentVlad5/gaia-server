@@ -157,6 +157,29 @@ const getTotalWeight = async (filters = {}) => {
   return Number(result.rows[0].total_weight);
 };
 
+const getBoxesForExport = async (filters) => {
+  const values = [];
+  const where = buildFilters(filters, values);
+
+  const query = `
+    SELECT 
+      b.date,
+      b.weight,
+      b.boxes_count,
+      b.comment,
+      p.name as product_name,
+      r.name as receiver_name
+    FROM boxes b
+    LEFT JOIN products p ON p.id = b.product_id
+    LEFT JOIN receivers r ON r.id = b.receiver_id
+    ${where}
+    ORDER BY b.date DESC
+  `;
+
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
 module.exports = {
   getAllBoxes,
   createBox,
@@ -164,4 +187,5 @@ module.exports = {
   deleteBox,
   getTotalWeight,
   getBoxById,
+  getBoxesForExport,
 };

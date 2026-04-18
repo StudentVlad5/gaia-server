@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/boxes.controller");
 
+router.get("/export", controller.exportBoxesToExcel);
 router.get("/", controller.getBoxes);
 router.post("/", controller.createBox);
 router.put("/:id", controller.updateBox);

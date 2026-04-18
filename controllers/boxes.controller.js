@@ -1,4 +1,5 @@
 const boxesService = require("../services/boxes.service");
+const ExcelJS = require("exceljs");
 
 let io;
 
@@ -115,10 +116,64 @@ const deleteBox = async (req, res) => {
   }
 };
 
+// Export EXCEL
+const exportBoxesToExcel = async (req, res) => {
+  try {
+    const { product_id, receiver_id, date_from, date_to, from, to } = req.query;
+
+    const filters = {
+      product_id,
+      receiver_id,
+      date_from: from || date_from,
+      date_to: to || date_to,
+    };
+
+    const data = await boxesService.getBoxesForExport(filters);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Boxes Report");
+
+    worksheet.columns = [
+      { header: "Дата", key: "date", width: 15 },
+      { header: "Товар", key: "product_name", width: 25 },
+      { header: "Отримувач", key: "receiver_name", width: 25 },
+      { header: "Вага (кг)", key: "weight", width: 12 },
+      { header: "К-сть місць", key: "boxes_count", width: 12 },
+      { header: "Коментар", key: "comment", width: 30 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true };
+
+    data.forEach((item) => {
+      worksheet.addRow({
+        ...item,
+        date: new Date(item.date).toLocaleDateString(),
+        receiver_name: item.receiver_name || "—",
+      });
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=" + `report_${Date.now()}.xlsx`,
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("Export Error:", err);
+    res.status(500).json({ success: false, message: "Export failed" });
+  }
+};
+
 module.exports = {
   setIO,
   getBoxes,
   createBox,
   updateBox,
   deleteBox,
+  exportBoxesToExcel,
 };
