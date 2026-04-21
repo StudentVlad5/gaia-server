@@ -1,26 +1,30 @@
 const authService = require("../services/auth.service");
 
 const sendTokens = (res, accessToken, refreshToken) => {
-  res.cookie("accessToken", accessToken, {
+  const cookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-  });
+    secure: process.env.NODE_ENV === "production", // true тільки на Render
+    sameSite: "none", // Важливо для крос-доменних запитів (Vercel -> Render)
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 днів
+  };
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-  });
+  res.cookie("accessToken", accessToken, cookieOptions);
+  res.cookie("refreshToken", refreshToken, cookieOptions);
 };
 
 const register = async (req, res) => {
   try {
+    if (!req.body || !req.body.username) {
+      return res
+        .status(400)
+        .json({ message: "Username and password are required" });
+    }
+
     const user = await authService.register(req.body);
-    res.json(user);
+    res.status(201).json(user);
   } catch (e) {
     if (e.code === "23505") {
-      return res.status(400).json({ message: "Username exists" });
+      return res.status(400).json({ message: "Username already exists" });
     }
     res.status(500).json({ message: e.message });
   }
@@ -28,6 +32,10 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+
     const { user, accessToken, refreshToken } = await authService.login(
       req.body,
     );
@@ -40,7 +48,7 @@ const login = async (req, res) => {
       role: user.role,
     });
   } catch (e) {
-    res.status(400).json({ message: e.message });
+    res.status(401).json({ message: e.message }); // 401 - Unauthorized
   }
 };
 

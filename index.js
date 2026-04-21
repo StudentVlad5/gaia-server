@@ -15,7 +15,7 @@ const initDB = require("./db/init");
 initDB();
 
 const app = express();
-app.use(cookieParser());
+
 const server = http.createServer(app);
 
 const corsOptions = {
@@ -37,6 +37,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.send("Gaia Server is running...");
