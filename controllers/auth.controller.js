@@ -13,6 +13,8 @@ const sendTokens = (res, accessToken, refreshToken) => {
 };
 
 const register = async (req, res) => {
+  console.log("Body received:", req.body);
+  console.log("req received:", req);
   try {
     if (!req.body || !req.body.username) {
       return res
