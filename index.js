@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const cookieParser = require("cookie-parser");
 
 const boxesRoutes = require("./routes/boxes.routes");
 const productsRoutes = require("./routes/products.routes");
@@ -14,6 +15,7 @@ const initDB = require("./db/init");
 initDB();
 
 const app = express();
+app.use(cookieParser());
 const server = http.createServer(app);
 
 const corsOptions = {
@@ -44,6 +46,8 @@ app.use("/boxes", boxesRoutes);
 app.use("/products", productsRoutes);
 app.use("/receivers", receiversRoutes);
 app.use("/reports", reportsRoutes);
+app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/users", require("./routes/users.routes"));
 
 io.on("connection", (socket) => {
   console.log("User connected");
