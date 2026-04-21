@@ -46,8 +46,8 @@ app.use("/boxes", boxesRoutes);
 app.use("/products", productsRoutes);
 app.use("/receivers", receiversRoutes);
 app.use("/reports", reportsRoutes);
-app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/users", require("./routes/users.routes"));
+app.use("/auth", require("./routes/auth.routes"));
+app.use("/users", require("./routes/users.routes"));
 
 io.on("connection", (socket) => {
   console.log("User connected");
