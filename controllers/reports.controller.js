@@ -8,7 +8,8 @@ const byDays = async (req, res) => {
     `
     SELECT DATE(date) as day, SUM(weight) as total_weight
     FROM boxes
-    WHERE date BETWEEN $1 AND $2
+    WHERE date >= $1::date
+    AND date < $2::date + INTERVAL '1 day'
     GROUP BY DATE(date)
     ORDER BY day ASC
     `,
@@ -30,7 +31,8 @@ const byProducts = async (req, res) => {
         COUNT(b.id) as total_boxes
       FROM boxes b
       LEFT JOIN products p ON p.id = b.product_id
-      WHERE b.date BETWEEN $1 AND $2
+      WHERE b.date >= $1::date
+      AND b.date < $2::date + INTERVAL '1 day'
       GROUP BY p.name
       ORDER BY total_weight DESC
     `,
@@ -70,7 +72,8 @@ LEFT JOIN (
     SUM(weight) as item_weight, 
     COUNT(*) as item_boxes
   FROM boxes
-  WHERE date BETWEEN $1 AND $2
+  WHERE date >= $1::date
+  AND date < $2::date + INTERVAL '1 day'
   GROUP BY receiver_id, product_id
 ) sub ON sub.receiver_id = r.id
 LEFT JOIN products p ON p.id = sub.product_id
@@ -94,7 +97,8 @@ const summary = async (req, res) => {
         SUM(weight) as total_weight,
         AVG(weight) as avg_weight
       FROM boxes
-      WHERE date::DATE BETWEEN $1::DATE AND $2::DATE
+      WHERE date >= $1::date
+      AND date < $2::date + INTERVAL '1 day'
     `,
       [from, to],
     );
