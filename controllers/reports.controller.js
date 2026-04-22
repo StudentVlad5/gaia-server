@@ -49,28 +49,33 @@ const byReceivers = async (req, res) => {
   const result = await pool.query(
     `
     SELECT 
-      r.name, 
-      SUM(b.weight) as total_weight, 
-      COUNT(b.id) as total_boxes,
-      JSON_AGG(
-        JSON_BUILD_OBJECT(
-          'product_name', p.name,
-          'total_weight', sub.item_weight,
-          'total_boxes', sub.item_boxes
-        )
-      ) as items
-    FROM receivers r
-    LEFT JOIN boxes b ON r.id = b.receiver_id
-    LEFT JOIN products p ON p.id = b.product_id
-    LEFT JOIN (
-      SELECT receiver_id, product_id, SUM(weight) as item_weight, COUNT(*) as item_boxes
-      FROM boxes
-      WHERE date BETWEEN $1 AND $2
-      GROUP BY receiver_id, product_id
-    ) sub ON sub.receiver_id = r.id AND sub.product_id = p.id
-    WHERE b.date BETWEEN $1 AND $2
-    GROUP BY r.name
-    ORDER BY total_weight DESC
+  r.name,
+  COALESCE(SUM(sub.item_weight), 0) as total_weight,
+  COALESCE(SUM(sub.item_boxes), 0) as total_boxes,
+  COALESCE(
+    JSON_AGG(
+      JSON_BUILD_OBJECT(
+        'product_name', p.name,
+        'total_weight', sub.item_weight,
+        'total_boxes', sub.item_boxes
+      )
+    ) FILTER (WHERE sub.product_id IS NOT NULL),
+    '[]'
+  ) as items
+FROM receivers r
+LEFT JOIN (
+  SELECT 
+    receiver_id, 
+    product_id, 
+    SUM(weight) as item_weight, 
+    COUNT(*) as item_boxes
+  FROM boxes
+  WHERE date BETWEEN $1 AND $2
+  GROUP BY receiver_id, product_id
+) sub ON sub.receiver_id = r.id
+LEFT JOIN products p ON p.id = sub.product_id
+GROUP BY r.name
+ORDER BY total_weight DESC;
   `,
     [from, to],
   );
