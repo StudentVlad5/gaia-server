@@ -33,3 +33,30 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   token TEXT NOT NULL,
   expires_at TIMESTAMP NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS containers (
+  id SERIAL PRIMARY KEY,
+  type VARCHAR(10), -- blue | gray | small
+  product VARCHAR(50),
+  factory VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS container_settings (
+  type VARCHAR(10) PRIMARY KEY,
+  total INT NOT NULL
+);
+
+INSERT INTO container_settings (type, total) VALUES
+('blue', 8),
+('gray', 20),
+('small', 12);
+
+CREATE TABLE IF NOT EXISTS factories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) UNIQUE
+);
+
+INSERT INTO factories (name) VALUES
+('Togo'),
+('Vive');

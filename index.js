@@ -10,6 +10,9 @@ const productsRoutes = require("./routes/products.routes");
 const receiversRoutes = require("./routes/receivers.routes");
 const reportsRoutes = require("./routes/reports.routes");
 const boxesController = require("./controllers/boxes.controller");
+const containersRoutes = require("./routes/containers.routes");
+const containersController = require("./controllers/containers.controller");
+const initContainersSocket = require("./socket/containers.socket");
 
 const initDB = require("./db/init");
 initDB();
@@ -28,6 +31,9 @@ const io = new Server(server, {
 });
 
 boxesController.setIO(io);
+containersController.setIO(io);
+
+initContainersSocket(io);
 
 app.use(
   cors({
@@ -49,6 +55,7 @@ app.use("/receivers", receiversRoutes);
 app.use("/reports", reportsRoutes);
 app.use("/auth", require("./routes/auth.routes"));
 app.use("/users", require("./routes/users.routes"));
+app.use("/containers", containersRoutes);
 
 io.on("connection", (socket) => {
   console.log("User connected");
