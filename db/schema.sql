@@ -47,16 +47,7 @@ CREATE TABLE IF NOT EXISTS container_settings (
   total INT NOT NULL
 );
 
-INSERT INTO container_settings (type, total) VALUES
-('blue', 8),
-('gray', 20),
-('small', 12);
-
 CREATE TABLE IF NOT EXISTS factories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) UNIQUE
 );
-
-INSERT INTO factories (name) VALUES
-('Togo'),
-('Vive');
