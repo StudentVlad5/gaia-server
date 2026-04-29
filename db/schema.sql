@@ -34,13 +34,19 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL
 );
 
+-- 1. Видаляємо стару таблицю
+DROP TABLE IF EXISTS containers;
+
+-- 2. Створюємо нову правильну таблицю з посиланням на factories
 CREATE TABLE IF NOT EXISTS containers (
   id SERIAL PRIMARY KEY,
-  type VARCHAR(10), -- blue | gray | small
-  product VARCHAR(50),
-  factory_id INTEGER REFERENCES factories(id),
+  type VARCHAR(10) NOT NULL, -- blue | gray | small
+  product VARCHAR(50) NOT NULL,
+  factory_id INTEGER REFERENCES factories(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX idx_containers_type ON containers(type);
 
 CREATE TABLE IF NOT EXISTS container_settings (
   type VARCHAR(10) PRIMARY KEY,
