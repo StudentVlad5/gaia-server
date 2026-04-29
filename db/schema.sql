@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS containers (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_containers_type ON containers(type);
+-- CREATE INDEX idx_containers_type ON containers(type);
 
 CREATE TABLE IF NOT EXISTS container_settings (
   type VARCHAR(10) PRIMARY KEY,
