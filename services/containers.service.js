@@ -2,20 +2,27 @@ const pool = require("../db");
 
 const getState = async () => {
   const containers = await pool.query(`
-    SELECT id, type, product, factory
-    FROM containers
-    ORDER BY created_at DESC
+    SELECT 
+      c.id, 
+      c.type, 
+      c.product, 
+      f.name as factory, 
+      c.created_at
+    FROM containers c
+    LEFT JOIN factories f ON c.factory_id = f.id
+    ORDER BY c.created_at DESC
   `);
 
   const grouped = await pool.query(`
     SELECT 
-      type, 
-      product, 
-      factory, 
-      COUNT(*) as count,
-      ARRAY_AGG(id) as ids  
-    FROM containers
-    GROUP BY type, product, factory
+      c.type, 
+      c.product, 
+      f.name as factory, 
+      COUNT(*)::INT as count,
+      ARRAY_AGG(c.id) as ids  
+    FROM containers c
+    LEFT JOIN factories f ON c.factory_id = f.id
+    GROUP BY c.type, c.product, f.name
   `);
 
   const settings = await pool.query(`
@@ -29,32 +36,19 @@ const getState = async () => {
   };
 };
 
-const addContainer = async ({ type, product, factory }) => {
+const addContainer = async ({ type, product, factoryId }) => {
   const totalRes = await pool.query(
     `SELECT total FROM container_settings WHERE type = $1`,
     [type],
   );
 
-  const usedRes = await pool.query(
-    `SELECT COUNT(*) FROM containers WHERE type = $1`,
-    [type],
+  const insertRes = await pool.query(
+    `INSERT INTO containers (type, product, factory_id) 
+     VALUES ($1, $2, $3) RETURNING *`,
+    [type, product, factoryId],
   );
 
-  const total = totalRes.rows[0].total;
-  const used = parseInt(usedRes.rows[0].count);
-
-  if (used >= total) {
-    throw new Error("No free containers");
-  }
-
-  const result = await pool.query(
-    `INSERT INTO containers (type, product, factory)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [type, product, factory],
-  );
-
-  return result.rows[0];
+  return insertRes.rows[0];
 };
 
 const removeContainer = async (id) => {

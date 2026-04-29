@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS containers (
   id SERIAL PRIMARY KEY,
   type VARCHAR(10), -- blue | gray | small
   product VARCHAR(50),
-  factory VARCHAR(50),
+  factory_id INTEGER REFERENCES factories(id),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -51,3 +51,6 @@ CREATE TABLE IF NOT EXISTS factories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) UNIQUE
 );
+ALTER TABLE containers 
+DROP COLUMN factory,
+ADD COLUMN factory_id INT REFERENCES factories(id);
