@@ -51,6 +51,3 @@ CREATE TABLE IF NOT EXISTS factories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) UNIQUE
 );
-ALTER TABLE containers 
-DROP COLUMN factory,
-ADD COLUMN factory_id INT REFERENCES factories(id);
