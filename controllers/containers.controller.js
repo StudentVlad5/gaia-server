@@ -74,6 +74,9 @@ const getFactories = async (req, res) => {
 const addFactory = async (req, res) => {
   try {
     const { name } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Factory name is required" });
+    }
 
     const factory = await containersService.addFactory(name);
 

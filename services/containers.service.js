@@ -8,7 +8,12 @@ const getState = async () => {
   `);
 
   const grouped = await pool.query(`
-    SELECT type, product, factory, COUNT(*) as count
+    SELECT 
+      type, 
+      product, 
+      factory, 
+      COUNT(*) as count,
+      ARRAY_AGG(id) as ids  
     FROM containers
     GROUP BY type, product, factory
   `);
