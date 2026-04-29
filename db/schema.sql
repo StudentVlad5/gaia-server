@@ -34,10 +34,6 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL
 );
 
--- 1. Видаляємо стару таблицю
-DROP TABLE IF EXISTS containers;
-
--- 2. Створюємо нову правильну таблицю з посиланням на factories
 CREATE TABLE IF NOT EXISTS containers (
   id SERIAL PRIMARY KEY,
   type VARCHAR(10) NOT NULL, -- blue | gray | small
