@@ -12,7 +12,12 @@ const reportsRoutes = require("./routes/reports.routes");
 const boxesController = require("./controllers/boxes.controller");
 const containersRoutes = require("./routes/containers.routes");
 const containersController = require("./controllers/containers.controller");
+const packagingsRoutes = require("./routes/packagings.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
+const packageProductsRoutes = require("./routes/packageProducts.routes");
+const packagingsController = require("./controllers/packagings.controller");
 const initContainersSocket = require("./socket/containers.socket");
+const initPackagingsSocket = require("./socket/packagings.socket");
 
 const initDB = require("./db/init");
 initDB();
@@ -32,8 +37,10 @@ const io = new Server(server, {
 
 boxesController.setIO(io);
 containersController.setIO(io);
+packagingsController.setIO(io);
 
 initContainersSocket(io);
+initPackagingsSocket(io);
 
 app.use(
   cors({
@@ -53,6 +60,9 @@ app.use("/boxes", boxesRoutes);
 app.use("/products", productsRoutes);
 app.use("/receivers", receiversRoutes);
 app.use("/reports", reportsRoutes);
+app.use("/packagings", packagingsRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/package-products", packageProductsRoutes);
 app.use("/auth", require("./routes/auth.routes"));
 app.use("/users", require("./routes/users.routes"));
 app.use("/containers", containersRoutes);

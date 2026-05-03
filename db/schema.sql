@@ -53,3 +53,27 @@ CREATE TABLE IF NOT EXISTS factories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) UNIQUE
 );
+
+CREATE TABLE IF NOT EXISTS package_products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  category VARCHAR(10) NOT NULL, -- L, TRI, DR, JACK...
+  standard_weight INTEGER NOT NULL CHECK (standard_weight IN (20, 25))
+);
+
+CREATE TABLE IF NOT EXISTS packagings (
+  id SERIAL PRIMARY KEY,
+
+  product_id INT REFERENCES package_products(id),
+  factory_id INT REFERENCES factories(id),
+
+  actual_weight NUMERIC NOT NULL,
+  standard_weight INTEGER NOT NULL,
+
+  difference NUMERIC GENERATED ALWAYS AS (actual_weight - standard_weight) STORED,
+
+  is_completed BOOLEAN DEFAULT FALSE,
+
+  created_at TIMESTAMP DEFAULT NOW(),
+  packed_at TIMESTAMP
+);
