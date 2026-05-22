@@ -227,6 +227,28 @@ const getTotalWeight = async (filters = {}) => {
   return Number(result.rows[0].total_weight);
 };
 
+const getPackagingsForExport = async (filters) => {
+  const values = [];
+  const where = buildFilters(filters, values);
+
+  const query = `
+    SELECT 
+      p.*,
+      pp.name as product_name,
+      pp.category,
+      pp.standard_weight as product_standard_weight,
+      f.name as factory_name
+    FROM packagings p
+    JOIN package_products pp ON pp.id = p.product_id
+    LEFT JOIN factories f ON f.id = p.factory_id
+    ${where}
+    ORDER BY p.created_at DESC
+  `;
+
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
 module.exports = {
   getAllPackagings,
   createPackaging,
@@ -234,4 +256,5 @@ module.exports = {
   deletePackaging,
   getPackagingById,
   getTotalWeight,
+  getPackagingsForExport,
 };

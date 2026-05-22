@@ -1,4 +1,5 @@
 const packagingsService = require("../services/packagings.service");
+const ExcelJS = require("exceljs");
 
 let io;
 
@@ -130,10 +131,69 @@ const deletePackaging = async (req, res) => {
   }
 };
 
+const exportPackagingsToExcel = async (req, res) => {
+  try {
+    const { product_id, factory_id, date_from, date_to } = req.query;
+
+    const filters = {
+      product_id,
+      factory_id,
+      date_from,
+      date_to,
+    };
+
+    const data = await packagingService.getPackagingsForExport(filters);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Packagings Journal");
+
+    worksheet.columns = [
+      { header: "Created At", key: "created_at", width: 20 },
+      { header: "Product", key: "product_name", width: 25 },
+      { header: "Category", key: "category", width: 15 },
+      { header: "Factory", key: "factory_name", width: 25 },
+      { header: "Norm (kg)", key: "standard_weight", width: 15 },
+      { header: "Actual (kg)", key: "actual_weight", width: 15 },
+      { header: "Diff (kg)", key: "difference", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true, size: 12 };
+
+    data.forEach((item) => {
+      worksheet.addRow({
+        created_at: new Date(item.created_at).toLocaleString(),
+        product_name: item.product_name,
+        category: item.category,
+        factory_name: item.factory_name || "—",
+        standard_weight: Number(item.standard_weight) || 0,
+        actual_weight: Number(item.actual_weight) || 0,
+        difference: Number(item.difference) || 0,
+        status: item.is_completed ? "Ready" : "Pending",
+      });
+    });
+
+    const fileName = `packagings_report_${new Date().toISOString().split("T")[0]}.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("Export Error:", err);
+    res.status(500).json({ success: false, message: "Export failed" });
+  }
+};
+
 module.exports = {
   setIO,
   getPackagings,
   createPackaging,
   updatePackaging,
   deletePackaging,
+  exportPackagingsToExcel,
 };
