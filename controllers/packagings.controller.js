@@ -142,7 +142,7 @@ const exportPackagingsToExcel = async (req, res) => {
       date_to: date_to || null,
     };
 
-    const data = await packagingService.getPackagingsForExport(filters);
+    const data = await packagingsService.getPackagingsForExport(filters);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Packagings Journal");
@@ -163,7 +163,6 @@ const exportPackagingsToExcel = async (req, res) => {
     data.forEach((item) => {
       const norm = Number(item.standard_weight) || 0;
       const actual = Number(item.actual_weight) || 0;
-      // Динамічно рахуємо різницю, як на фронтенді
       const diff = (actual - norm).toFixed(2);
 
       worksheet.addRow({
@@ -192,10 +191,6 @@ const exportPackagingsToExcel = async (req, res) => {
     console.error("Export Error:", err);
     res.status(500).json({ success: false, message: "Export failed" });
   }
-};
-
-module.exports = {
-  exportPackagingsToExcel,
 };
 
 module.exports = {
