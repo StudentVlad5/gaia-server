@@ -136,10 +136,10 @@ const exportPackagingsToExcel = async (req, res) => {
     const { product_id, factory_id, date_from, date_to } = req.query;
 
     const filters = {
-      product_id,
-      factory_id,
-      date_from,
-      date_to,
+      product_id: product_id || null,
+      factory_id: factory_id || null,
+      date_from: date_from || null,
+      date_to: date_to || null,
     };
 
     const data = await packagingService.getPackagingsForExport(filters);
@@ -161,14 +161,19 @@ const exportPackagingsToExcel = async (req, res) => {
     worksheet.getRow(1).font = { bold: true, size: 12 };
 
     data.forEach((item) => {
+      const norm = Number(item.standard_weight) || 0;
+      const actual = Number(item.actual_weight) || 0;
+      // Динамічно рахуємо різницю, як на фронтенді
+      const diff = (actual - norm).toFixed(2);
+
       worksheet.addRow({
         created_at: new Date(item.created_at).toLocaleString(),
         product_name: item.product_name,
         category: item.category,
         factory_name: item.factory_name || "—",
-        standard_weight: Number(item.standard_weight) || 0,
-        actual_weight: Number(item.actual_weight) || 0,
-        difference: Number(item.difference) || 0,
+        standard_weight: norm,
+        actual_weight: actual,
+        difference: Number(diff),
         status: item.is_completed ? "Ready" : "Pending",
       });
     });
@@ -187,6 +192,10 @@ const exportPackagingsToExcel = async (req, res) => {
     console.error("Export Error:", err);
     res.status(500).json({ success: false, message: "Export failed" });
   }
+};
+
+module.exports = {
+  exportPackagingsToExcel,
 };
 
 module.exports = {
