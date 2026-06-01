@@ -99,4 +99,4 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 -- Індекси для швидкої вибірки live-статусу
-CREATE INDEX idx_orders_dates ON orders(date_start, date_end, status);
+CREATE INDEX IF NOT EXISTS idx_orders_dates ON orders(date_start, date_end, status);
