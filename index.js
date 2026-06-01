@@ -16,8 +16,10 @@ const packagingsRoutes = require("./routes/packagings.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const packageProductsRoutes = require("./routes/packageProducts.routes");
 const packagingsController = require("./controllers/packagings.controller");
+const ordersController = require("./controllers/orders.controller");
 const initContainersSocket = require("./socket/containers.socket");
 const initPackagingsSocket = require("./socket/packagings.socket");
+const initOrdersSocket = require("./socket/orders.socket");
 
 const initDB = require("./db/init");
 initDB();
@@ -38,10 +40,11 @@ const io = new Server(server, {
 boxesController.setIO(io);
 containersController.setIO(io);
 packagingsController.setIO(io);
+ordersController.setIO(io);
 
 initContainersSocket(io);
 initPackagingsSocket(io);
-
+initOrdersSocket(io);
 app.use(
   cors({
     origin: true,
@@ -66,6 +69,7 @@ app.use("/package-products", packageProductsRoutes);
 app.use("/auth", require("./routes/auth.routes"));
 app.use("/users", require("./routes/users.routes"));
 app.use("/containers", containersRoutes);
+app.use("/orders", require("./routes/orders.routes"));
 
 io.on("connection", (socket) => {
   console.log("User connected");

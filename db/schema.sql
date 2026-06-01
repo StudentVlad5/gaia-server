@@ -77,3 +77,26 @@ CREATE TABLE IF NOT EXISTS packagings (
   created_at TIMESTAMP DEFAULT NOW(),
   packed_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  receiver_id INTEGER NOT NULL REFERENCES receivers(id) ON DELETE RESTRICT,
+  date_start DATE NOT NULL,
+  date_end DATE NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active', -- active, completed, cancelled
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT chk_dates CHECK (date_end >= date_start)
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  planned_boxes INTEGER NOT NULL CHECK (planned_boxes > 0),
+  
+  CONSTRAINT uq_order_product UNIQUE (order_id, product_id)
+);
+
+-- Індекси для швидкої вибірки live-статусу
+CREATE INDEX idx_orders_dates ON orders(date_start, date_end, status);
