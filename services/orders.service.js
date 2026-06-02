@@ -146,48 +146,65 @@ class OrdersService {
 
   async getLiveShippingStatus() {
     const sql = `
+    WITH plan_data AS (
+      -- Збираємо все, що було заплановано
+      SELECT 
+        o.id as order_id,
+        o.receiver_id,
+        o.date_start,
+        o.date_end,
+        oi.product_id,
+        oi.planned_boxes,
+        oi.avg_weight_snapshot as avg_weight
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.status = 'active' 
+        AND CURRENT_DATE BETWEEN o.date_start AND o.date_end
+    ),
+    fact_data AS (
+      -- Збираємо все, що фактично упакували в межах дат активних ордерів
+      SELECT 
+        o.id as order_id,
+        b.receiver_id,
+        b.product_id,
+        SUM(b.boxes_count)::int as packed_boxes,
+        SUM(b.weight)::numeric(10,2) as packed_weight
+      FROM orders o
+      JOIN boxes b ON b.receiver_id = o.receiver_id
+      WHERE o.status = 'active'
+        AND CURRENT_DATE BETWEEN o.date_start AND o.date_end
+        AND b.date >= o.date_start 
+        AND b.date <= (o.date_end + INTERVAL '1 day')
+      GROUP BY o.id, b.receiver_id, b.product_id
+    ),
+    combined_data AS (
+      -- Об'єднуємо ПЛАН і ФАКТ за допомогою FULL JOIN
+      SELECT 
+        COALESCE(p.order_id, f.order_id) as order_id,
+        COALESCE(p.receiver_id, f.receiver_id) as receiver_id,
+        COALESCE(p.product_id, f.product_id) as product_id,
+        COALESCE(p.planned_boxes, 0) as planned_boxes,
+        COALESCE(p.avg_weight, 0) as avg_weight,
+        COALESCE(f.packed_boxes, 0) as packed_boxes,
+        COALESCE(f.packed_weight, 0) as packed_weight,
+        -- Прапорець: якщо в плані немає коробки, то вона непередбачена
+        CASE WHEN p.product_id IS NULL THEN TRUE ELSE FALSE END as is_unexpected
+      FROM plan_data p
+      FULL OUTER JOIN fact_data f 
+        ON p.order_id = f.order_id AND p.product_id = f.product_id
+    )
+    -- Фінальний селект з підтягуванням імен продуктів та отримувачів
     SELECT 
-      o.id as order_id,
-      o.receiver_id,
+      c.*,
       r.name as receiver_name,
-      o.date_start,
-      o.date_end,
-      oi.product_id,
       p.name as product_name,
-      oi.planned_boxes,
-      
-      -- 1. Беремо збережений зліпок середньої ваги коробки
-      oi.avg_weight_snapshot as avg_weight,
-      
-      -- 2. Рахуємо фактично упаковані коробки
-      COALESCE(
-        (SELECT SUM(b.boxes_count) 
-         FROM boxes b 
-         WHERE b.receiver_id = o.receiver_id 
-           AND b.product_id = oi.product_id
-           AND b.date >= o.date_start 
-           AND b.date <= (o.date_end + INTERVAL '1 day')
-        ), 0
-      )::int as packed_boxes,
-
-      -- 3. Рахуємо РЕАЛЬНУ фактичну вагу цих коробок з журналу boxes
-      COALESCE(
-        (SELECT SUM(b.weight) 
-         FROM boxes b 
-         WHERE b.receiver_id = o.receiver_id 
-           AND b.product_id = oi.product_id
-           AND b.date >= o.date_start 
-           AND b.date <= (o.date_end + INTERVAL '1 day')
-        ), 0
-      )::numeric(10,2) as packed_weight
-
-    FROM orders o
-    JOIN receivers r ON o.receiver_id = r.id
-    JOIN order_items oi ON o.id = oi.order_id
-    JOIN products p ON oi.product_id = p.id
-    WHERE o.status = 'active' 
-      AND CURRENT_DATE BETWEEN o.date_start AND o.date_end
-    ORDER BY o.id, p.name
+      o.date_start,
+      o.date_end
+    FROM combined_data c
+    JOIN orders o ON c.order_id = o.id
+    JOIN receivers r ON c.receiver_id = r.id
+    JOIN products p ON c.product_id = p.id
+    ORDER BY c.order_id, c.is_unexpected, p.name;
   `;
 
     const res = await db.query(sql);
@@ -199,7 +216,6 @@ class OrdersService {
           id: row.order_id,
           receiver_id: row.receiver_id,
           receiver_name: row.receiver_name,
-          // Безпечне форматування дат без ризику падіння через часові пояси
           date_start:
             row.date_start instanceof Date
               ? row.date_start.toISOString().split("T")[0]
@@ -219,6 +235,7 @@ class OrdersService {
         packed_boxes: Number(row.packed_boxes) || 0,
         avg_weight: Number(row.avg_weight) || 0,
         packed_weight: Number(row.packed_weight) || 0,
+        is_unexpected: row.is_unexpected,
       });
     });
 
