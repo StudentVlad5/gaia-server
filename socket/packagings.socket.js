@@ -9,6 +9,7 @@ const initPackagingsSocket = (io) => {
 
       io.emit("packaging:update");
       io.emit("dashboard_update");
+      io.emit("shipping:live_update");
     });
 
     socket.on("packaging:update", async ({ id, data }) => {
@@ -16,6 +17,7 @@ const initPackagingsSocket = (io) => {
 
       io.emit("packaging:update");
       io.emit("dashboard_update");
+      io.emit("shipping:live_update");
     });
 
     socket.on("packaging:delete", async (id) => {
@@ -23,6 +25,7 @@ const initPackagingsSocket = (io) => {
 
       io.emit("packaging:update");
       io.emit("dashboard_update");
+      io.emit("shipping:live_update");
     });
   });
 };
