@@ -60,7 +60,11 @@ const createBox = async (req, res) => {
   try {
     const newBox = await boxesService.createBox(req.body);
     const fullBox = await boxesService.getBoxById(newBox.id);
-    io.emit("box_created", fullBox);
+
+    if (io) {
+      io.emit("box_created", fullBox);
+      io.emit("shipping:live_update", fullBox);
+    }
 
     res.json({
       success: true,
@@ -79,10 +83,12 @@ const createBox = async (req, res) => {
 const updateBox = async (req, res) => {
   try {
     const updated = await boxesService.updateBox(req.params.id, req.body);
-
     const fullBox = await boxesService.getBoxById(updated.id);
 
-    io.emit("box_updated", fullBox);
+    if (io) {
+      io.emit("box_updated", fullBox);
+      io.emit("shipping:live_update", fullBox);
+    }
 
     res.json({
       success: true,
@@ -100,9 +106,19 @@ const updateBox = async (req, res) => {
 // DELETE
 const deleteBox = async (req, res) => {
   try {
-    await boxesService.deleteBox(req.params.id);
+    const boxId = req.params.id;
 
-    io.emit("box_deleted", req.params.id);
+    // 1. Fetch data before deletion to inform live views which tracking indicators changed
+    const boxDetails = await boxesService.getBoxById(boxId);
+
+    // 2. Perform DB execution
+    await boxesService.deleteBox(boxId);
+
+    // 3. Emit update event downstream using safe variables
+    if (io) {
+      io.emit("box_deleted", boxId);
+      io.emit("shipping:live_update", boxDetails);
+    }
 
     res.json({
       success: true,
