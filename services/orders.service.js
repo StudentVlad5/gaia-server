@@ -1,6 +1,16 @@
 const db = require("../db");
 
 class OrdersService {
+  async _getCurrentAvgWeight(productId) {
+    const res = await db.query(
+      `SELECT COALESCE(AVG(weight / COALESCE(boxes_count, 1)), 0)::numeric(10,2) as average_weight
+       FROM boxes 
+       WHERE product_id = $1`,
+      [productId],
+    );
+    return Number(res.rows[0].average_weight) || 0;
+  }
+
   async createOrder({ receiver_id, date_start, date_end, items }) {
     const client = await db.connect();
     try {
@@ -14,10 +24,13 @@ class OrdersService {
       const orderId = orderRes.rows[0].id;
 
       for (const item of items) {
+        const currentAvgWeight =
+          item.avg_weight || (await this._getCurrentAvgWeight(item.product_id));
+
         await client.query(
-          `INSERT INTO order_items (order_id, product_id, planned_boxes) 
-           VALUES ($1, $2, $3)`,
-          [orderId, item.product_id, item.planned_boxes],
+          `INSERT INTO order_items (order_id, product_id, planned_boxes, avg_weight_snapshot) 
+           VALUES ($1, $2, $3, $4)`,
+          [orderId, item.product_id, item.planned_boxes, currentAvgWeight],
         );
       }
 
@@ -39,9 +52,13 @@ class OrdersService {
     );
     if (orderRes.rows.length === 0) return null;
 
+    // Повертаємо avg_weight_snapshot як avg_weight для фронтенду
     const itemsRes = await db.query(
-      `SELECT oi.*, p.name as product_name 
-       FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = $1`,
+      `SELECT oi.id, oi.order_id, oi.product_id, oi.planned_boxes, 
+              oi.avg_weight_snapshot as avg_weight, p.name as product_name 
+       FROM order_items oi 
+       JOIN products p ON oi.product_id = p.id 
+       WHERE oi.order_id = $1`,
       [id],
     );
 
@@ -54,7 +71,9 @@ class OrdersService {
     let query = `
       SELECT o.*, r.name as receiver_name,
              COUNT(oi.id)::int as total_products,
-             SUM(oi.planned_boxes)::int as total_planned_boxes
+             SUM(oi.planned_boxes)::int as total_planned_boxes,
+             -- Розрахунок на основі збережених снепшотів ваги
+             COALESCE(SUM(oi.planned_boxes * oi.avg_weight_snapshot), 0)::numeric(10,2) as total_expected_weight
       FROM orders o
       JOIN receivers r ON o.receiver_id = r.id
       LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -80,6 +99,7 @@ class OrdersService {
     return res.rows;
   }
 
+  // 4. Оновлення замовлення
   async updateOrder(id, { date_start, date_end, status, items }) {
     const client = await db.connect();
     try {
@@ -93,9 +113,14 @@ class OrdersService {
       if (items) {
         await client.query(`DELETE FROM order_items WHERE order_id = $1`, [id]);
         for (const item of items) {
+          const currentAvgWeight =
+            item.avg_weight ||
+            (await this._getCurrentAvgWeight(item.product_id));
+
           await client.query(
-            `INSERT INTO order_items (order_id, product_id, planned_boxes) VALUES ($1, $2, $3)`,
-            [id, item.product_id, item.planned_boxes],
+            `INSERT INTO order_items (order_id, product_id, planned_boxes, avg_weight_snapshot) 
+             VALUES ($1, $2, $3, $4)`,
+            [id, item.product_id, item.planned_boxes, currentAvgWeight],
           );
         }
       }
@@ -115,15 +140,9 @@ class OrdersService {
     return res.rowCount > 0;
   }
 
-  // Розрахунок середньої ваги коробки за існуючими даними
   async getProductAverageWeight(productId) {
-    const res = await db.query(
-      `SELECT COALESCE(AVG(weight / COALESCE(boxes_count, 1)), 0)::numeric(10,2) as average_weight
-       FROM boxes 
-       WHERE product_id = $1`,
-      [productId],
-    );
-    return res.rows[0];
+    const avgWeight = await this._getCurrentAvgWeight(productId);
+    return { average_weight: avgWeight };
   }
 
   async getLiveShippingStatus() {
