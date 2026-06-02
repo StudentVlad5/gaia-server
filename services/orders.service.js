@@ -99,7 +99,6 @@ class OrdersService {
     return res.rows;
   }
 
-  // 4. Оновлення замовлення
   async updateOrder(id, { date_start, date_end, status, items }) {
     const client = await db.connect();
     try {
@@ -147,32 +146,49 @@ class OrdersService {
 
   async getLiveShippingStatus() {
     const sql = `
-      SELECT 
-        o.id as order_id,
-        o.receiver_id,
-        r.name as receiver_name,
-        o.date_start,
-        o.date_end,
-        oi.product_id,
-        p.name as product_name,
-        oi.planned_boxes,
-        COALESCE(
-          (SELECT SUM(b.boxes_count) 
-           FROM boxes b 
-           WHERE b.receiver_id = o.receiver_id 
-             AND b.product_id = oi.product_id
-             AND b.date >= o.date_start 
-             AND b.date <= (o.date_end + INTERVAL '1 day')
-          ), 0
-        )::int as packed_boxes
-      FROM orders o
-      JOIN receivers r ON o.receiver_id = r.id
-      JOIN order_items oi ON o.id = oi.order_id
-      JOIN products p ON oi.product_id = p.id
-      WHERE o.status = 'active' 
-        AND CURRENT_DATE BETWEEN o.date_start AND o.date_end
-      ORDER BY o.id, p.name
-    `;
+    SELECT 
+      o.id as order_id,
+      o.receiver_id,
+      r.name as receiver_name,
+      o.date_start,
+      o.date_end,
+      oi.product_id,
+      p.name as product_name,
+      oi.planned_boxes,
+      
+      -- 1. Беремо збережений зліпок середньої ваги коробки
+      oi.avg_weight_snapshot as avg_weight,
+      
+      -- 2. Рахуємо фактично упаковані коробки
+      COALESCE(
+        (SELECT SUM(b.boxes_count) 
+         FROM boxes b 
+         WHERE b.receiver_id = o.receiver_id 
+           AND b.product_id = oi.product_id
+           AND b.date >= o.date_start 
+           AND b.date <= (o.date_end + INTERVAL '1 day')
+        ), 0
+      )::int as packed_boxes,
+
+      -- 3. Рахуємо РЕАЛЬНУ фактичну вагу цих коробок з журналу boxes
+      COALESCE(
+        (SELECT SUM(b.weight) 
+         FROM boxes b 
+         WHERE b.receiver_id = o.receiver_id 
+           AND b.product_id = oi.product_id
+           AND b.date >= o.date_start 
+           AND b.date <= (o.date_end + INTERVAL '1 day')
+        ), 0
+      )::numeric(10,2) as packed_weight
+
+    FROM orders o
+    JOIN receivers r ON o.receiver_id = r.id
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN products p ON oi.product_id = p.id
+    WHERE o.status = 'active' 
+      AND CURRENT_DATE BETWEEN o.date_start AND o.date_end
+    ORDER BY o.id, p.name
+  `;
 
     const res = await db.query(sql);
 
@@ -183,16 +199,26 @@ class OrdersService {
           id: row.order_id,
           receiver_id: row.receiver_id,
           receiver_name: row.receiver_name,
-          date_start: row.date_start.toISOString().split("T")[0],
-          date_end: row.date_end.toISOString().split("T")[0],
+          // Безпечне форматування дат без ризику падіння через часові пояси
+          date_start:
+            row.date_start instanceof Date
+              ? row.date_start.toISOString().split("T")[0]
+              : row.date_start,
+          date_end:
+            row.date_end instanceof Date
+              ? row.date_end.toISOString().split("T")[0]
+              : row.date_end,
           items: [],
         };
       }
+
       ordersMap[row.order_id].items.push({
         product_id: row.product_id,
         product_name: row.product_name,
-        planned_boxes: row.planned_boxes,
-        packed_boxes: row.packed_boxes,
+        planned_boxes: Number(row.planned_boxes) || 0,
+        packed_boxes: Number(row.packed_boxes) || 0,
+        avg_weight: Number(row.avg_weight) || 0,
+        packed_weight: Number(row.packed_weight) || 0,
       });
     });
 
