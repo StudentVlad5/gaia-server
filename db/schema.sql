@@ -34,6 +34,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS factories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS containers (
   id SERIAL PRIMARY KEY,
   type VARCHAR(10) NOT NULL, -- blue | gray | small
@@ -47,11 +52,6 @@ CREATE TABLE IF NOT EXISTS containers (
 CREATE TABLE IF NOT EXISTS container_settings (
   type VARCHAR(10) PRIMARY KEY,
   total INT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS factories (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS package_products (
