@@ -28,6 +28,7 @@ const app = express();
 
 const server = http.createServer(app);
 
+const allowedOrigin = process.env.CORS_ORIGIN || "*";
 const corsOptions = {
   origin: allowedOrigin === "*" ? true : allowedOrigin.split(","),
   credentials: true,
