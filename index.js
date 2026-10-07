@@ -29,12 +29,22 @@ const app = express();
 const server = http.createServer(app);
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: allowedOrigin === "*" ? true : allowedOrigin.split(","),
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 };
 
 const io = new Server(server, {
   cors: corsOptions,
+});
+
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(cookieParser());
+
+// Ендпоінт для перевірки здоров'я ALB
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
 });
 
 boxesController.setIO(io);
@@ -53,8 +63,6 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   }),
 );
-app.use(express.json());
-app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.send("Gaia Server is running...");
