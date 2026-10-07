@@ -25,7 +25,6 @@ const initDB = require("./db/init");
 initDB();
 
 const app = express();
-
 const server = http.createServer(app);
 
 const allowedOrigin = process.env.CORS_ORIGIN || "*";
@@ -43,9 +42,16 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// Ендпоінт для перевірки здоров'я ALB
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
+});
+
+app.get("/", (req, res) => {
+  res.send("Gaia Server is running...");
+});
+
+app.get("/api", (req, res) => {
+  res.send("Gaia Server API is running...");
 });
 
 boxesController.setIO(io);
@@ -57,33 +63,22 @@ initContainersSocket(io);
 initPackagingsSocket(io);
 initOrdersSocket(io);
 
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  }),
-);
-
-app.get("/", (req, res) => {
-  res.send("Gaia Server is running...");
-});
-
-app.use("/boxes", boxesRoutes);
-app.use("/products", productsRoutes);
-app.use("/receivers", receiversRoutes);
-app.use("/reports", reportsRoutes);
-app.use("/packagings", packagingsRoutes);
-app.use("/dashboard", dashboardRoutes);
-app.use("/package-products", packageProductsRoutes);
-app.use("/auth", require("./routes/auth.routes"));
-app.use("/users", require("./routes/users.routes"));
-app.use("/containers", containersRoutes);
-app.use("/orders", require("./routes/orders.routes"));
+app.use("/api/boxes", boxesRoutes);
+app.use("/api/products", productsRoutes);
+app.use("/api/receivers", receiversRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/packagings", packagingsRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/package-products", packageProductsRoutes);
+app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/users", require("./routes/users.routes"));
+app.use("/api/containers", containersRoutes);
+app.use("/api/orders", require("./routes/orders.routes"));
 
 io.on("connection", (socket) => {
   console.log("User connected");
 });
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
