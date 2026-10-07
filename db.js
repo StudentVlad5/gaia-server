@@ -7,11 +7,15 @@ const { Pool } = require("pg");
 //   password: "1234",
 //   port: 5432,
 // });
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  // Вмикаємо ssl лише якщо в рядку або env прямо вказано sslmode=require
+  ssl:
+    process.env.DATABASE_URL &&
+    process.env.DATABASE_URL.includes("sslmode=require")
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 module.exports = pool;
